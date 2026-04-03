@@ -30,39 +30,39 @@ jobs:
           cache: true
 
       # =========================================================
-      # 🔥 THE ULTIMATE FIX: Python Script to Force V2 Embedding
+      # 🚀 THE ULTIMATE FIX: Clean CRLF & Force V2 Embedding
       # =========================================================
-      - name: Force Android V2 Embedding
+      - name: Fix Windows Line Endings & Force V2 Embedding
         run: |
-          python -c "
-          import os
-          path = 'android/app/src/main/AndroidManifest.xml'
-          if os.path.exists(path):
-              with open(path, 'r', encoding='utf-8') as f:
-                  content = f.read()
-              
-              # 1. Inject flutterEmbedding if missing
-              if 'flutterEmbedding' not in content:
-                  content = content.replace('</application>', '    <meta-data android:name=\"flutterEmbedding\" android:value=\"2\" />\n    </application>')
-                  print('✅ Injected flutterEmbedding meta-data.')
-              
-              # 2. Fix the application name issue
-              if 'io.flutter.app.FlutterApplication' in content:
-                  content = content.replace('android:name=\"io.flutter.app.FlutterApplication\"', 'android:name=\"\${applicationName}\"')
-                  print('✅ Fixed Application Name.')
-                  
-              with open(path, 'w', encoding='utf-8') as f:
-                  f.write(content)
-          else:
-              print('❌ AndroidManifest.xml not found!')
-          "
+          # Install dos2unix to fix hidden Windows formatting characters
+          sudo apt-get update && sudo apt-get install -y dos2unix
           
-          # 3. Fix MainActivity imports using bash find
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          
+          if [ -f "$MANIFEST" ]; then
+            # Convert Windows CRLF to Linux LF
+            dos2unix "$MANIFEST"
+            
+            # Remove any broken/duplicate flutterEmbedding tags
+            sed -i '/flutterEmbedding/d' "$MANIFEST"
+            
+            # Fix Application Name from V1 to V2
+            sed -i 's/android:name="io.flutter.app.FlutterApplication"/android:name="${applicationName}"/g' "$MANIFEST"
+            
+            # Force inject V2 Meta-data exactly before the closing </application> tag
+            sed -i '/<\/application>/i \        <meta-data android:name="flutterEmbedding" android:value="2" />' "$MANIFEST"
+            echo "✅ Manifest cleaned and V2 Embedding injected successfully."
+          else
+            echo "❌ AndroidManifest.xml not found!"
+          fi
+
+          # Fix MainActivity imports and CRLF issues
+          find android/app/src/main -name "MainActivity.*" -type f -exec dos2unix {} +
           find android/app/src/main -name "MainActivity.*" -type f -exec sed -i 's/io.flutter.app.FlutterActivity/io.flutter.embedding.android.FlutterActivity/g' {} +
-          echo "✅ Fixed MainActivity imports."
+          echo "✅ MainActivity files patched successfully."
 
       # =========================================================
-      # SECURE INJECTION OF GOOGLE SERVICES JSON
+      # 🔐 SECURE INJECTION OF GOOGLE SERVICES JSON
       # =========================================================
       - name: Inject Google Services JSON
         env:
@@ -75,7 +75,7 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           echo "✅ Successfully injected google-services.json"
 
-      # Install dependencies (Ab ye 100% pass hoga)
+      # Install dependencies (Ab yeh bina error ke pass hoga!)
       - name: Get Flutter Dependencies
         run: flutter pub get
 
