@@ -10,14 +10,14 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # Firebase Dependencies
+  # Firebase Services
   firebase_core: ^2.24.2
   firebase_auth: ^4.14.1
   cloud_firestore: ^4.13.1
   
-  # UI & Utilities
+  # UI & Tools
   cupertino_icons: ^1.0.6
-  url_launcher: ^6.2.1 # Required for UPI App redirection
+  url_launcher: ^6.2.1
 
 dev_dependencies:
   flutter_test:
