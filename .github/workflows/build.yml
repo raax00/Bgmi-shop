@@ -29,19 +29,50 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # =========================================================
+      # 🪄 MAGIC AUTO-FIX STEP: Upgrade to V2 Embedding automatically
+      # =========================================================
+      - name: Auto-Fix Android V2 Embedding
+        run: |
+          echo "Checking and Auto-Fixing Android V2 Embedding..."
+          
+          # 1. Fix application name in AndroidManifest.xml
+          sed -i 's/android:name="io.flutter.app.FlutterApplication"/android:name="${applicationName}"/g' android/app/src/main/AndroidManifest.xml
+          
+          # 2. Force inject flutterEmbedding meta-data if missing
+          if ! grep -q "flutterEmbedding" android/app/src/main/AndroidManifest.xml; then
+            echo "Injecting flutterEmbedding meta-data..."
+            sed -i '/<\/application>/i \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
+          fi
+          
+          # 3. Fix MainActivity (Kotlin or Java) imports
+          find android/app/src/main -name "MainActivity.*" -exec sed -i 's/io.flutter.app.FlutterActivity/io.flutter.embedding.android.FlutterActivity/g' {} +
+          
+          echo "Auto-Fix Completed!"
+
+      # =========================================================
+      # SECURE INJECTION OF GOOGLE SERVICES JSON
+      # =========================================================
       - name: Inject Google Services JSON
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Error: GOOGLE_SERVICES_JSON secret is empty or not set in GitHub Secrets!"
+            exit 1
+          fi
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           echo "Successfully injected google-services.json"
 
+      # Install dependencies (ab ye error nahi dega)
       - name: Get Flutter Dependencies
         run: flutter pub get
 
+      # Build the App
       - name: Build Release APK
         run: flutter build apk --release
 
+      # Upload the final APK
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
