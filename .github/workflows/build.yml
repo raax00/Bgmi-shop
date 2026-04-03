@@ -30,25 +30,36 @@ jobs:
           cache: true
 
       # =========================================================
-      # 🪄 MAGIC AUTO-FIX STEP: Upgrade to V2 Embedding automatically
+      # 🔥 THE ULTIMATE FIX: Python Script to Force V2 Embedding
       # =========================================================
-      - name: Auto-Fix Android V2 Embedding
+      - name: Force Android V2 Embedding
         run: |
-          echo "Checking and Auto-Fixing Android V2 Embedding..."
+          python -c "
+          import os
+          path = 'android/app/src/main/AndroidManifest.xml'
+          if os.path.exists(path):
+              with open(path, 'r', encoding='utf-8') as f:
+                  content = f.read()
+              
+              # 1. Inject flutterEmbedding if missing
+              if 'flutterEmbedding' not in content:
+                  content = content.replace('</application>', '    <meta-data android:name=\"flutterEmbedding\" android:value=\"2\" />\n    </application>')
+                  print('✅ Injected flutterEmbedding meta-data.')
+              
+              # 2. Fix the application name issue
+              if 'io.flutter.app.FlutterApplication' in content:
+                  content = content.replace('android:name=\"io.flutter.app.FlutterApplication\"', 'android:name=\"\${applicationName}\"')
+                  print('✅ Fixed Application Name.')
+                  
+              with open(path, 'w', encoding='utf-8') as f:
+                  f.write(content)
+          else:
+              print('❌ AndroidManifest.xml not found!')
+          "
           
-          # 1. Fix application name in AndroidManifest.xml
-          sed -i 's/android:name="io.flutter.app.FlutterApplication"/android:name="${applicationName}"/g' android/app/src/main/AndroidManifest.xml
-          
-          # 2. Force inject flutterEmbedding meta-data if missing
-          if ! grep -q "flutterEmbedding" android/app/src/main/AndroidManifest.xml; then
-            echo "Injecting flutterEmbedding meta-data..."
-            sed -i '/<\/application>/i \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
-          fi
-          
-          # 3. Fix MainActivity (Kotlin or Java) imports
-          find android/app/src/main -name "MainActivity.*" -exec sed -i 's/io.flutter.app.FlutterActivity/io.flutter.embedding.android.FlutterActivity/g' {} +
-          
-          echo "Auto-Fix Completed!"
+          # 3. Fix MainActivity imports using bash find
+          find android/app/src/main -name "MainActivity.*" -type f -exec sed -i 's/io.flutter.app.FlutterActivity/io.flutter.embedding.android.FlutterActivity/g' {} +
+          echo "✅ Fixed MainActivity imports."
 
       # =========================================================
       # SECURE INJECTION OF GOOGLE SERVICES JSON
@@ -58,13 +69,13 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "Error: GOOGLE_SERVICES_JSON secret is empty or not set in GitHub Secrets!"
+            echo "❌ Error: GOOGLE_SERVICES_JSON secret is empty in GitHub Secrets!"
             exit 1
           fi
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-          echo "Successfully injected google-services.json"
+          echo "✅ Successfully injected google-services.json"
 
-      # Install dependencies (ab ye error nahi dega)
+      # Install dependencies (Ab ye 100% pass hoga)
       - name: Get Flutter Dependencies
         run: flutter pub get
 
